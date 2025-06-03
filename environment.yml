@@ -15,3 +15,5 @@ dependencies:
   - tqdm
   - ffmpeg
   - shapely
+  - pip:
+    - nfl_data_py

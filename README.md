@@ -1,4 +1,4 @@
-# An Study of Offensive Lineman Zone Run Blocking Abilites
+# An Study of Offensive Lineman Run Blocking Abilites
 
 
 ## Setting up the Env to run the notebook:
@@ -36,4 +36,4 @@ Place the unedited 2025 NFL Big Data Bowl competition data in a folder named "da
 
 ---
 
-You’re now ready to run the notebook using the `ravens` environment!
+You’re now ready to run the notebook using the `ravens` environment.

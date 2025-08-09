@@ -32,7 +32,7 @@ jupyter notebook
 Then, in the notebook interface, select the kernel named **nfl-oline**.
 
 ### Step 5: Add the "data" folder
-Place the unedited 2025 NFL Big Data Bowl competition data in a folder named "data" at the root level of the project.
+Place the unedited 2025 NFL Big Data Bowl competition data in a folder named 'data/raw' at the root level of the project.
 
 ---
 

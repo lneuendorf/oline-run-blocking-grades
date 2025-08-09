@@ -1,4 +1,4 @@
-name: ravens
+name: nfl-oline
 channels:
   - defaults
   - conda-forge

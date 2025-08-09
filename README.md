@@ -14,13 +14,13 @@ conda env create -f environment.yml
 ### Step 2: Activate the Environment
 
 ```bash
-conda activate ravens
+conda activate nfl-oline
 ```
 
 ### Step 3: Register the Environment as a Jupyter Kernel
 
 ```bash
-python -m ipykernel install --user --name=ravens --display-name="ravens"
+python -m ipykernel install --user --name=nfl-oline --display-name="nfl-oline"
 ```
 
 ### Step 4: Launch Jupyter Notebook
@@ -29,11 +29,11 @@ python -m ipykernel install --user --name=ravens --display-name="ravens"
 jupyter notebook
 ```
 
-Then, in the notebook interface, select the kernel named **ravens**.
+Then, in the notebook interface, select the kernel named **nfl-oline**.
 
 ### Step 5: Add the "data" folder
 Place the unedited 2025 NFL Big Data Bowl competition data in a folder named "data" at the root level of the project.
 
 ---
 
-You’re now ready to run the notebook using the `ravens` environment.
+You’re now ready to run the notebook using the `nfl-oline` environment.

@@ -104,20 +104,31 @@ def _process_single_game_play(args):
         'oline_positions': positions_map
     }
 
-
 def calculate_oline_attributions(tracking):
     """Calculate O-line attribution in parallel across game_play_id."""
-    game_play_ids = tracking['game_play_id'].unique()
-    
-    # Use groupby once and convert to list of tuples for better parallel processing
-    grouped = [(gpid, group) for gpid, group in tracking.groupby('game_play_id')]
-    
+
+    game_play_ids = list(tracking['game_play_id'].unique())
+
+    grouped = {
+        gpid: g.copy() for gpid, g in 
+        tracking[tracking['game_play_id'].isin(game_play_ids)].groupby('game_play_id')
+    }
+
     results = []
-    with ProcessPoolExecutor(max_workers=min(os.cpu_count(), 8)) as executor:
-        futures = [executor.submit(_process_single_game_play, args) for args in grouped]
-        for future in tqdm(as_completed(futures), total=len(futures), desc="Processing"):
-            results.append(future.result())
-    
+    with ProcessPoolExecutor(max_workers=os.cpu_count()) as executor:
+        futures = {
+            executor.submit(_process_single_game_play, (gpid, grouped[gpid])): gpid
+            for gpid in game_play_ids
+        }
+        for fut in tqdm(
+            iterable=as_completed(futures), 
+            total=len(futures),
+            desc="Calculating O-line attributions"
+        ):
+            res = fut.result()
+            if res:
+                results.append(res)
+
     return results
 
 def save_results(attribution_results):

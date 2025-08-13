@@ -32,7 +32,7 @@ def add_rb_coords(tracking):
     ).round(2)
     tracking.drop(columns=['ball_carrier_x', 'ball_carrier_y'], inplace=True)
 
-    return tracking
+    return trackingnhbn
 
 def _process_single_game_play(args):
     """Worker function to compute O-line attributions for a single game_play_id."""
@@ -70,7 +70,7 @@ def _process_single_game_play(args):
             [non_oline_df, oline[oline['nfl_id'].isin(subset)]],
             ignore_index=True
         )
-        val = get_rb_field_control(coalition_df, every_n_frames=2)
+        val = get_rb_field_control(coalition_df, every_n_frames=3)
         coalition_cache[subset_key] = val
         return val
 

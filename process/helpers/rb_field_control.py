@@ -5,7 +5,8 @@ from .influence import influence
 
 def get_rb_field_control(
     tracking,
-    every_n_frames: int = 1
+    every_n_frames: int = 1,
+    vision_cone_angle: int = 45,
 ) -> float:
     """Calculate RB field control for a given play.
     
@@ -38,10 +39,12 @@ def get_rb_field_control(
         rb_x = rb_data['x'].values[0]
         rb_y = rb_data['y'].values[0]
         rb_dir = rb_data['dir'].values[0]
-        rb_speed = rb_data['s'].values[0]
-
-        rb_coords = _get_rb_vision_cone_and_semicircle_coords(
-            rb_x, rb_y, np.radians(rb_dir), rb_speed
+        rb_coords = _get_vision_cone(
+            rb_pos = np.array([rb_x, rb_y]),
+            rb_dir_rad = np.radians(rb_dir),
+            cone_angle_deg=vision_cone_angle,
+            cone_length=3,
+            spacing=0.1
         )
         fc_values.append(_compute_field_control(
             tracking.query('frame_id == @frame_id'), rb_coords
@@ -72,14 +75,11 @@ def _compute_field_control(
 def _get_vision_cone(
     rb_pos,
     rb_dir_rad,
-    rb_speed,
     cone_angle_deg=45,
-    min_length=3,
-    speed_factor=0.3,
+    cone_length=3,
     spacing=0.5
 ):
     """Generate evenly spaced points inside RB vision cone."""
-    cone_length = min_length + rb_speed * speed_factor
     cone_half_angle = np.radians(cone_angle_deg / 2)
 
     # Create a grid that covers the cone bounding box
@@ -105,60 +105,3 @@ def _get_vision_cone(
         [np.sin(rb_dir_rad), np.cos(rb_dir_rad)]
     ])
     return (rot_matrix @ cone_points.T).T + rb_pos
-
-
-def _get_rb_semicircle(
-    rb_pos,
-    rb_dir_rad,
-    radius=1.5,
-    cone_angle_deg=45,
-    spacing=0.5
-):
-    """Generate evenly spaced points in semicircle behind RB."""
-    excluded_half_angle = np.radians(cone_angle_deg / 2)
-
-    # Create a grid that covers full circle bounding box
-    grid_x, grid_y = np.meshgrid(
-        np.arange(-radius, radius + spacing, spacing),
-        np.arange(-radius, radius + spacing, spacing)
-    )
-    points = np.column_stack([grid_x.ravel(), grid_y.ravel()])
-
-    dist = np.linalg.norm(points, axis=1)
-    angles = np.arctan2(points[:, 1], points[:, 0])  # relative to +x direction
-
-    # Keep points within circle but outside cone wedge
-    mask = (
-        (dist <= radius) &
-        ((angles > excluded_half_angle) | (angles < -excluded_half_angle))
-    )
-    semi_points = points[mask]
-
-    # Rotate and translate to RB position
-    rot_matrix = np.array([
-        [np.cos(rb_dir_rad), -np.sin(rb_dir_rad)],
-        [np.sin(rb_dir_rad), np.cos(rb_dir_rad)]
-    ])
-    return (rot_matrix @ semi_points.T).T + rb_pos
-
-
-def _get_rb_vision_cone_and_semicircle_coords(
-    rb_x, rb_y, rb_dir_rad, rb_speed,
-    cone_angle_deg=45, min_length=3, speed_factor=0.3, spacing=0.5
-):
-    """Union of vision cone and semicircle points at consistent spacing."""
-    rb_pos = np.array([rb_x, rb_y])
-
-    cone_pts = _get_vision_cone(
-        rb_pos, rb_dir_rad, rb_speed,
-        cone_angle_deg, min_length, speed_factor, spacing
-    )
-    semi_pts = _get_rb_semicircle(
-        rb_pos, rb_dir_rad,
-        radius=1.5, cone_angle_deg=cone_angle_deg, spacing=spacing
-    )
-
-    # Union: stack and remove duplicates
-    all_pts = np.vstack([cone_pts, semi_pts])
-    all_pts = np.unique(np.round(all_pts, 3), axis=0)
-    return all_pts

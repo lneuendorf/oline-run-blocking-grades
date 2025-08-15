@@ -85,7 +85,6 @@ def _process_single_game_play(args):
         loo_fc = fc_for_subset(subset)
         loo_attributions[pid] = baseline_fc - loo_fc  # How much FC drops when player is removed
 
-    print(f"Game Play ID: {gpid}, Baseline FC: {baseline_fc}, LOO Attributions: {loo_attributions}")
     return {
         'game_play_id': gpid,
         'baseline_fc': baseline_fc,

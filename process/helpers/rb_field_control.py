@@ -44,7 +44,7 @@ def get_rb_field_control(
             rb_dir_rad = np.radians(rb_dir),
             cone_angle_deg=vision_cone_angle,
             cone_length=3,
-            spacing=0.1
+            spacing=0.25
         )
         fc_values.append(_compute_field_control(
             tracking.query('frame_id == @frame_id'), rb_coords

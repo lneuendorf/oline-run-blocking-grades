@@ -127,6 +127,8 @@ def _process_single_game_play(args):
             olineman_df=oline[oline['nfl_id'] == pid],
             non_oline_df=non_oline_df
         )
+        # filter engagment mask to every 3 frames
+        engagement_mask = engagement_mask[::3]
         if engagement_mask.sum() == 0:
             loo_attributions[pid] = 0.0
             continue

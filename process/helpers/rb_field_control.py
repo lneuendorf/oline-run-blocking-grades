@@ -1,5 +1,6 @@
 import sys
 import numpy as np
+import numpy.typing as npt
 import pandas as pd
 from .influence import influence
 
@@ -7,7 +8,7 @@ def get_rb_field_control(
     tracking,
     every_n_frames: int = 1,
     vision_cone_angle: int = 45,
-) -> float:
+) -> npt.NDArray[np.float32]:
     """Calculate RB field control for a given play.
     
     Args:
@@ -64,7 +65,7 @@ def get_rb_field_control(
             rb_coords
         ))
 
-    return np.mean(fc_values) if fc_values else 0.0
+    return np.array(fc_values, dtype=np.float32)
 
 def _compute_field_control(
     frame_df: pd.DataFrame,

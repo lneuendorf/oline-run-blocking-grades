@@ -39,6 +39,47 @@ def add_rb_coords(tracking):
 
     return tracking
 
+def _olineman_engaged_with_defender(
+    olineman_df: pd.DataFrame,
+    non_oline_df: pd.DataFrame,
+    distance_threshold: float = 1.5,
+) -> np.ndarray:
+    """
+    Determine if the O-lineman is engaged with a defender (one row per frame).
+    Engagement = at least one defender within `distance_threshold`.
+    """
+
+    # Filter defenders once
+    defenders_df = non_oline_df[non_oline_df["offense"] == 0]
+
+    # Merge lineman and defenders on frame_id (all pairs per frame)
+    merged = olineman_df.merge(
+        defenders_df, on="frame_id", suffixes=("_oline", "_def")
+    )
+
+    # Compute distance between lineman and each defender
+    dx = merged["x_oline"].to_numpy() - merged["x_def"].to_numpy()
+    dy = merged["y_oline"].to_numpy() - merged["y_def"].to_numpy()
+    dists = np.sqrt(dx**2 + dy**2)
+
+    # Flag if engaged with at least one defender in that frame
+    merged["engaged"] = (dists <= distance_threshold).astype(int)
+
+    # Collapse to 1 row per frame: engaged if any defender is close
+    engaged_per_frame = (
+        merged.groupby("frame_id")["engaged"].max().reindex(olineman_df["frame_id"], fill_value=0)
+    )
+
+    # Smooth to engagement of at least 5 consecutive frames
+    def mask_short_streaks(series: pd.Series, min_streak: int = 5) -> pd.Series:
+        runs = (series != series.shift()).cumsum()
+        run_lengths = series.groupby(runs).transform("size")
+        return series.where((series == 0) | (run_lengths >= min_streak), 0)
+    
+    engaged_series = mask_short_streaks(engaged_per_frame, min_streak=5)
+
+    return engaged_series.to_numpy()
+
 def _process_single_game_play(args):
     """Worker function to compute O-line attributions for a single game_play_id."""
     gpid, df_all = args
@@ -75,15 +116,24 @@ def _process_single_game_play(args):
             vision_cone_angle=VISION_CONE_ANGLE
         )
 
-    # Baseline with all O-line
+    # Baseline with all O-line across all frames
     baseline_fc = fc_for_subset(oline_ids)
 
     # Calculate LOO attributions
     loo_attributions = {}
     for pid in oline_ids:
         subset = [p for p in oline_ids if p != pid]
+        engagement_mask = _olineman_engaged_with_defender(
+            olineman_df=oline[oline['nfl_id'] == pid],
+            non_oline_df=non_oline_df
+        )
+        if engagement_mask.sum() == 0:
+            loo_attributions[pid] = 0.0
+            continue
         loo_fc = fc_for_subset(subset)
-        loo_attributions[pid] = baseline_fc - loo_fc  # How much FC drops when player is removed
+        loo_attributions[pid] = float(
+            (baseline_fc - loo_fc)[engagement_mask == 1].mean()
+        )
 
     return {
         'game_play_id': gpid,
@@ -122,7 +172,7 @@ def save_results(attribution_results):
     ])
 
     attrib_df.to_csv(
-        join(RESULTS_DIR, f'oline_loo_attribution_{VISION_CONE_ANGLE}.csv'), 
+        join(RESULTS_DIR, f'oline_loo_attribution_v2_{VISION_CONE_ANGLE}.csv'), 
         index=False
     )
 

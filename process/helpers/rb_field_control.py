@@ -39,13 +39,26 @@ def get_rb_field_control(
         rb_x = rb_data['x'].values[0]
         rb_y = rb_data['y'].values[0]
         rb_dir = rb_data['dir'].values[0]
-        rb_coords = _get_vision_cone(
-            rb_pos = np.array([rb_x, rb_y]),
-            rb_dir_rad = np.radians(rb_dir),
-            cone_angle_deg=vision_cone_angle,
-            cone_length=3,
-            spacing=0.25
-        )
+
+        # RB field control coordinates are a combination of vision cone and 
+        # semicircle surrounding the RB
+        rb_coords = np.vstack([
+            _get_vision_cone(
+                rb_pos = np.array([rb_x, rb_y]),
+                rb_dir_rad = np.radians(rb_dir),
+                cone_angle_deg=vision_cone_angle,
+                cone_length=3,
+                spacing=0.25
+            ),
+            _get_rb_semicircle(
+                rb_pos = np.array([rb_x, rb_y]),
+                rb_dir_rad = np.radians(rb_dir),
+                radius=1,
+                cone_angle_deg=90,
+                spacing=0.05
+            )
+        ])
+        
         fc_values.append(_compute_field_control(
             tracking.query('frame_id == @frame_id and is_ball_carrier == 0'),
             rb_coords
@@ -106,3 +119,37 @@ def _get_vision_cone(
         [np.sin(rb_dir_rad), np.cos(rb_dir_rad)]
     ])
     return (rot_matrix @ cone_points.T).T + rb_pos
+
+def _get_rb_semicircle(
+    rb_pos,
+    rb_dir_rad,
+    radius=1,
+    cone_angle_deg=45,
+    spacing=0.5
+):
+    """Generate evenly spaced points in semicircle behind RB."""
+    excluded_half_angle = np.radians((cone_angle_deg) / 2)
+
+    # Create a grid that covers full circle bounding box
+    grid_x, grid_y = np.meshgrid(
+        np.arange(-radius, radius + spacing, spacing),
+        np.arange(-radius, radius + spacing, spacing)
+    )
+    points = np.column_stack([grid_x.ravel(), grid_y.ravel()])
+
+    dist = np.linalg.norm(points, axis=1)
+    angles = np.arctan2(points[:, 1], points[:, 0])  # relative to +x direction
+
+    # Keep points within circle but outside cone wedge
+    mask = (
+        (dist <= radius) &
+        ((angles > excluded_half_angle) | (angles < -excluded_half_angle))
+    )
+    semi_points = points[mask]
+
+    # Rotate and translate to RB position
+    rot_matrix = np.array([
+        [np.cos(rb_dir_rad), -np.sin(rb_dir_rad)],
+        [np.sin(rb_dir_rad), np.cos(rb_dir_rad)]
+    ])
+    return (rot_matrix @ semi_points.T).T + rb_pos

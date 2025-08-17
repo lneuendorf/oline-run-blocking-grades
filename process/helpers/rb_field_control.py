@@ -56,7 +56,7 @@ def get_rb_field_control(
                 rb_dir_rad = np.radians(rb_dir),
                 radius=1,
                 cone_angle_deg=90,
-                spacing=0.05
+                spacing=0.25
             )
         ])
         

@@ -47,7 +47,8 @@ def get_rb_field_control(
             spacing=0.25
         )
         fc_values.append(_compute_field_control(
-            tracking.query('frame_id == @frame_id'), rb_coords
+            tracking.query('frame_id == @frame_id and is_ball_carrier == 0'),
+            rb_coords
         ))
 
     return np.mean(fc_values) if fc_values else 0.0
